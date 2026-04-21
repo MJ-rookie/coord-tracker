@@ -3,75 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>明信片雲端紀錄 - Pikmin 目錄版</title>
+    <title>Pikmin 多人共享大地圖</title>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js"></script>
     <style>
-        :root { --primary: #2563eb; --edit: #7c3aed; --bg: #f8fafc; --danger: #ef4444; --border: #e2e8f0; --mush: #ec4899; --flower: #f59e0b; }
-        
-        html, body { height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, "Noto Sans TC", sans-serif; background: var(--bg); color: #1e293b; }
-
+        :root { --primary: #2563eb; --edit: #7c3aed; --bg: #f1f5f9; --danger: #ef4444; --border: #e2e8f0; --mush: #ec4899; --flower: #f59e0b; }
+        html, body { height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, "Noto Sans TC", sans-serif; background: var(--bg); }
         .main-wrapper { display: flex; flex-direction: column; height: 100vh; padding: 10px; box-sizing: border-box; }
-        
         .container { width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; height: 100%; gap: 15px; }
-
-        @media (min-width: 768px) {
-            .container { flex-direction: row; align-items: flex-start; }
-            .card { width: 350px; flex-shrink: 0; }
-            #recordList { flex-grow: 1; }
-        }
-        
-        .card { background: white; padding: 15px; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); box-sizing: border-box; flex-shrink: 0; }
-        h2 { margin: 0 0 10px 0; color: var(--primary); text-align: center; font-size: 1.3rem; }
-        
-        label { font-size: 0.8rem; color: #64748b; margin-bottom: 2px; display: block; margin-top: 5px; }
-        input, select, button { width: 100%; padding: 10px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 0.95rem; }
-        
-        button { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; margin-top: 3px; }
+        @media (min-width: 768px) { .container { flex-direction: row; align-items: flex-start; } .card { width: 350px; flex-shrink: 0; } #recordList { flex-grow: 1; } }
+        .card { background: white; padding: 15px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); box-sizing: border-box; }
+        h2 { margin: 0 0 10px 0; color: var(--primary); text-align: center; font-size: 1.2rem; }
+        label { font-size: 0.8rem; color: #64748b; display: block; margin-top: 5px; }
+        input, select, button { width: 100%; padding: 10px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 0.9rem; }
+        button { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
         button:disabled { background: #cbd5e1; cursor: not-allowed; }
-        .btn-auth { background: #4285F4; margin-bottom: 10px; }
-        .btn-update { background: var(--edit); }
-        .btn-cancel { background: #94a3b8; }
-        
-        #preview-container { width: 100%; max-height: 120px; margin-top: 5px; display: none; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); background: #eee; }
-        #preview { width: 100%; height: auto; max-height: 120px; display: block; object-fit: contain; }
-        
-        #recordList { flex-grow: 1; overflow-y: auto; padding-bottom: 20px; height: 100%; -webkit-overflow-scrolling: touch; }
-        .item-card { background: white; border-radius: 12px; overflow: hidden; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border); }
-        .item-card img { width: 100%; height: auto; display: block; background: #f1f5f9; min-height: 100px; cursor: pointer; }
-        
-        .item-info { padding: 12px; border-top: 1px solid var(--border); }
-        .item-text h3 { margin: 0; font-size: 1rem; color: #0f172a; display: flex; align-items: center; gap: 6px; }
-        .badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 20px; color: white; font-weight: normal; }
-        .badge-mush { background: var(--mush); }
-        .badge-flower { background: var(--flower); }
-        .item-text p { color: #64748b; font-size: 0.8rem; margin: 4px 0 0 0; }
-        
-        .user-tag { font-size: 0.65rem; color: #2563eb; font-weight: bold; margin-top: 5px; display: block; }
-        
-        .item-actions { display: flex; gap: 8px; margin-top: 10px; }
-        .btn-small { width: auto; padding: 5px 12px; font-size: 0.75rem; margin: 0; flex: 1; }
-        .btn-edit-action { background: var(--edit); }
-        .btn-delete-action { background: var(--danger); }
-        
-        .tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+        .btn-auth { background: #4285F4; }
+        #preview-container { width: 100%; max-height: 120px; display: none; border-radius: 8px; overflow: hidden; margin-bottom: 10px; border: 1px solid var(--border); }
+        #preview { width: 100%; height: auto; display: block; }
+        #recordList { flex-grow: 1; overflow-y: auto; padding-bottom: 20px; }
+        .item-card { background: white; border-radius: 12px; overflow: hidden; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid var(--border); }
+        .item-card img { width: 100%; cursor: pointer; background: #eee; min-height: 150px; object-fit: cover; }
+        .item-info { padding: 12px; }
+        .item-text h3 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 6px; }
+        .badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; color: white; }
+        .user-tag { font-size: 0.7rem; color: #2563eb; margin-top: 5px; display: block; font-weight: bold; }
         #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); color: var(--primary); justify-content: center; align-items: center; font-weight: bold; z-index: 1000; }
     </style>
 </head>
 <body>
 
-<div id="loading-overlay">處理中，請稍候...</div>
+<div id="loading-overlay">🌐 正在同步雲端資料...</div>
 
 <div class="main-wrapper">
     <div class="container">
         <div class="card">
-            <h2 id="form-title">📍 雲端座標紀錄</h2>
-            
-            <button id="auth_btn" class="btn-auth" onclick="handleAuthClick()">連結 Google 帳號</button>
-            <div id="user_display" style="font-size:0.75rem; color:#64748b; text-align:center; margin-bottom:10px;">尚未登入</div>
+            <h2>🛰️ 共享座標紀錄</h2>
+            <button id="auth_btn" class="btn-auth" onclick="handleAuthClick()">1. 連結 Google 帳號 (必做)</button>
+            <div id="user_display" style="font-size:0.7rem; color:#64748b; text-align:center; margin-top:5px;">尚未同步</div>
+
+            <hr style="margin: 15px 0; border: 0.5px solid #eee;">
 
             <label>地點名稱</label>
-            <input type="text" id="locName" placeholder="例如：大坑步道">
+            <input type="text" id="locName" placeholder="例如：勤美綠園道">
             
             <label>類別</label>
             <select id="category">
@@ -79,49 +53,48 @@
                 <option value="花">🌸 花卉</option>
             </select>
             
-            <label>經緯度座標</label>
-            <div style="display: flex; gap: 8px;">
+            <label>經緯度</label>
+            <div style="display: flex; gap: 5px;">
                 <input type="number" id="lat" placeholder="緯度" step="any">
                 <input type="number" id="lng" placeholder="經度" step="any">
             </div>
             
-            <label>檔案上傳 (將存至 pikmin 目錄)</label>
+            <label>明信片照片</label>
             <input type="file" id="fileInput" accept="image/*" onchange="processImage(this)">
-            
             <div id="preview-container"><img id="preview"></div>
             
-            <button id="save-btn" onclick="saveRecord()" disabled>✅ 儲存雲端紀錄</button>
-            <button id="cancel-btn" class="btn-cancel" onclick="cancelEdit()" style="display: none;">❌ 取消修改</button>
-
-            <div class="tools">
-                <button style="background:#059669;" onclick="exportData()">📤 匯出</button>
-                <button style="background:#f59e0b;" onclick="document.getElementById('importFile').click()">📥 匯入</button>
-            </div>
-            <input type="file" id="importFile" style="display: none;" accept=".json" onchange="importData(this)">
+            <button id="save-btn" onclick="saveRecord()" disabled>✅ 儲存並同步給所有人</button>
+            <button style="background:#64748b; margin-top:10px;" onclick="initDataSync()">🔄 手動重新整理</button>
         </div>
 
-        <div id="recordList"></div>
+        <div id="recordList">
+            <p style="text-align:center; color:#94a3b8; margin-top:20px;">正在讀取共享看板...</p>
+        </div>
     </div>
 </div>
 
 <script>
-    const CLIENT_ID = '您的用戶端ID.apps.googleusercontent.com';
-    const API_KEY = '您的API金鑰';
-    const DISCOVERY_DOC = "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest";
-    const SCOPES = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email";
+    // --- ⚠️ 以下請填入你的設定 ---
+    const CLIENT_ID = '30705957391-knin529rrok93vikmsbv8vfbtbe5lvlg.apps.googleusercontent.com';
+    const API_KEY = 'AIzaSyACs1du7WYKyAAv20jkEP6GYHTHSbttDTg';
+    const SPREADSHEET_ID = '1vNkmtTtKrxSkH17-o_4Rmvt0eDwKaAq1dZxuRr_z2fA';
+    const SHARED_FOLDER_ID = '1NhUdriZ8lRia2sDbomYBkBTe02eOzwKs'; 
+    // ----------------------------
+
+    const DISCOVERY_DOCS = [
+        "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
+        "https://sheets.googleapis.com/v4/spreadsheets/$discovery/rest?version=v4"
+    ];
+    const SCOPES = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets";
 
     let tokenClient;
     let currentUserEmail = "未知帳號";
-    let finalBase64Image = "";
     let rawFile = null;
-    let editingId = null;
 
-    const overlay = document.getElementById('loading-overlay');
-
-    // 初始化 API
     function gapiLoaded() { gapi.load('client', async () => {
-        await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC] });
+        await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
     });}
+
     function gisLoaded() {
         tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID, scope: SCOPES, callback: async (resp) => {
@@ -130,49 +103,30 @@
                     headers: { Authorization: `Bearer ${resp.access_token}` }
                 }).then(res => res.json());
                 currentUserEmail = userInfo.email;
-                document.getElementById('user_display').innerText = `登入帳號：${currentUserEmail}`;
+                document.getElementById('user_display').innerText = `已同步：${currentUserEmail}`;
                 document.getElementById('auth_btn').innerText = "✅ 雲端已連線";
                 document.getElementById('save-btn').disabled = false;
+                initDataSync(); // 登入後自動抓取資料
             }
         });
     }
 
     function handleAuthClick() { tokenClient.requestAccessToken({prompt: 'consent'}); }
 
-    // 建立或取得 pikmin 資料夾 ID
-    // 將原本的 getOrCreateFolder 換成這個簡單的版本
-    async function getOrCreateFolder() {
-        // 這裡填入你剛剛在網址列複製的那個資料夾 ID
-        const SHARED_FOLDER_ID = '1NhUdriZ8lRia2sDbomYBkBTe02eOzwKs'; 
-        return SHARED_FOLDER_ID;
-    }
-
-    // 圖片處理
     function processImage(input) {
         rawFile = input.files[0];
         if (!rawFile) return;
         const reader = new FileReader();
         reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                let width = img.width, height = img.height;
-                const MAX = 300;
-                if (width > height) { if (width > MAX) { height *= MAX / width; width = MAX; } }
-                else { if (height > MAX) { width *= MAX / height; height = MAX; } }
-                canvas.width = width; canvas.height = height;
-                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-                finalBase64Image = canvas.toDataURL('image/jpeg', 0.5);
-                document.getElementById('preview').src = e.target.result;
-                document.getElementById('preview-container').style.display = 'block';
-            };
-            img.src = e.target.result;
+            document.getElementById('preview').src = e.target.result;
+            document.getElementById('preview-container').style.display = 'block';
         };
         reader.readAsDataURL(rawFile);
     }
 
-    async function uploadToDrive(file, folderId) {
-        const metadata = { 'name': `Pikmin_${Date.now()}.jpg`, 'mimeType': 'image/jpeg', 'parents': [folderId] };
+    // [寫入雲端硬碟]
+    async function uploadToDrive(file) {
+        const metadata = { 'name': `Pikmin_${Date.now()}.jpg`, 'mimeType': 'image/jpeg', 'parents': [SHARED_FOLDER_ID] };
         const formData = new FormData();
         formData.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
         formData.append('file', file);
@@ -185,114 +139,83 @@
         return res.id;
     }
 
+    // [寫入 Google Sheets]
+    async function saveToSheet(record) {
+        const values = [[ record.id, record.time, record.name, record.category, record.lat, record.lng, record.user, record.driveId ]];
+        await gapi.client.sheets.spreadsheets.values.append({
+            spreadsheetId: SPREADSHEET_ID, range: 'Sheet1!A1',
+            valueInputOption: 'RAW', resource: { values: values }
+        });
+    }
+
+    // [從 Google Sheets 抓取所有資料]
+    async function initDataSync() {
+        if (!gapi.client.sheets) return;
+        document.getElementById('loading-overlay').style.display = 'flex';
+        try {
+            const response = await gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID, range: 'Sheet1!A2:H',
+            });
+            const rows = response.result.values || [];
+            const data = rows.map(row => ({
+                id: row[0], time: row[1], name: row[2], category: row[3],
+                lat: row[4], lng: row[5], user: row[6], driveId: row[7]
+            }));
+            renderList(data);
+        } catch (e) { console.error("同步失敗", e); }
+        document.getElementById('loading-overlay').style.display = 'none';
+    }
+
     async function saveRecord() {
         const name = document.getElementById('locName').value;
         const lat = document.getElementById('lat').value;
-        const lng = document.getElementById('lng').value;
-        if (!name || !lat) return alert("請填寫資訊");
+        if (!name || !lat || !rawFile) return alert("請填寫資訊並上傳照片");
 
-        overlay.style.display = 'flex';
+        document.getElementById('loading-overlay').style.display = 'flex';
         try {
-            let driveId = null;
-            if (rawFile) {
-                const folderId = await getOrCreateFolder();
-                driveId = await uploadToDrive(rawFile, folderId);
-            }
-
-            let data = JSON.parse(localStorage.getItem('myMapData_v3') || '[]');
-            const recordData = {
-                name, lat, lng,
+            const driveId = await uploadToDrive(rawFile);
+            const newRecord = {
+                id: Date.now(),
+                time: new Date().toLocaleString(),
+                name: name,
                 category: document.getElementById('category').value,
-                image: finalBase64Image || (editingId ? data.find(r => r.id === editingId).image : ""),
-                driveId: driveId || (editingId ? data.find(r => r.id === editingId).driveId : null),
+                lat: lat,
+                lng: document.getElementById('lng').value,
                 user: currentUserEmail,
-                updateTime: new Date().toLocaleString()
+                driveId: driveId
             };
-
-            if (editingId) {
-                const idx = data.findIndex(r => r.id === editingId);
-                data[idx] = { ...data[idx], ...recordData };
-            } else {
-                data.push({ id: Date.now(), time: new Date().toLocaleString(), ...recordData });
-            }
-
-            localStorage.setItem('myMapData_v3', JSON.stringify(data));
-            cancelEdit();
-            renderList();
-            alert("儲存成功！檔案已存至雲端 pikmin 資料夾");
-        } catch (e) { alert("儲存失敗，請確保已登入 Google"); }
-        overlay.style.display = 'none';
+            await saveToSheet(newRecord);
+            alert("同步儲存成功！所有朋友都看得到囉！");
+            location.reload(); // 重新整理頁面顯示最新清單
+        } catch (e) { alert("儲存失敗，請檢查權限或網路"); }
+        document.getElementById('loading-overlay').style.display = 'none';
     }
 
-    function renderList() {
-        const data = JSON.parse(localStorage.getItem('myMapData_v3') || '[]');
+    function renderList(data) {
         const list = document.getElementById('recordList');
+        if (data.length === 0) {
+            list.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:20px;">目前還沒有任何共享紀錄</p>';
+            return;
+        }
         list.innerHTML = data.slice().reverse().map(r => `
             <div class="item-card">
-                <img src="${r.driveId ? `https://drive.google.com/thumbnail?id=${r.driveId}&sz=w800` : r.image}" 
-                     onclick="if('${r.driveId}') window.open('https://drive.google.com/file/d/${r.driveId}/view')">
+                <img src="https://drive.google.com/thumbnail?id=${r.driveId}&sz=w800" 
+                     onclick="window.open('https://drive.google.com/file/d/${r.driveId}/view')">
                 <div class="item-info">
                     <div class="item-text">
-                        <h3>${r.name} <span class="badge ${r.category === '菇' ? 'badge-mush' : 'badge-flower'}">${r.category === '菇' ? '🍄 菇' : '🌸 花'}</span></h3>
-                        <p>🌐 ${r.lat}, ${r.lng}</p>
-                        <p style="font-size:0.6rem; color:#a1a1aa;">📅 ${r.updateTime || r.time}</p>
-                        <span class="user-tag">👤 紀錄者：${r.user || '未知'}</span>
-                    </div>
-                    <div class="item-actions">
-                        <button class="btn-small btn-edit-action" onclick="startEdit(${r.id})">修改</button>
-                        <button class="btn-small btn-delete-action" onclick="deleteItem(${r.id})">刪除</button>
+                        <h3>${r.name} <span class="badge ${r.category === '菇' ? 'badge-mush' : 'badge-flower'}" style="background:${r.category === '菇' ? '#ec4899' : '#f59e0b'}">${r.category}</span></h3>
+                        <p style="font-size:0.75rem; color:#64748b; margin:5px 0;">🌐 座標：${r.lat}, ${r.lng}</p>
+                        <p style="font-size:0.6rem; color:#a1a1aa;">📅 時間：${r.time}</p>
+                        <span class="user-tag">👤 紀錄者：${r.user}</span>
                     </div>
                 </div>
             </div>
         `).join('');
     }
 
-    function startEdit(id) {
-        const item = JSON.parse(localStorage.getItem('myMapData_v3')).find(r => r.id === id);
-        editingId = id;
-        document.getElementById('locName').value = item.name;
-        document.getElementById('category').value = item.category;
-        document.getElementById('lat').value = item.lat;
-        document.getElementById('lng').value = item.lng;
-        document.getElementById('form-title').innerText = "✏️ 正在修改紀錄";
-        document.getElementById('save-btn').innerText = "💾 更新紀錄";
-        document.getElementById('cancel-btn').style.display = 'block';
-    }
-
-    function cancelEdit() {
-        editingId = null; rawFile = null; finalBase64Image = "";
-        document.getElementById('locName').value = ""; document.getElementById('preview-container').style.display = 'none';
-        document.getElementById('form-title').innerText = "📍 雲端座標紀錄";
-        document.getElementById('save-btn').innerText = "✅ 儲存雲端紀錄";
-        document.getElementById('cancel-btn').style.display = 'none';
-    }
-
-    function deleteItem(id) { if(confirm("確定刪除？")) {
-        let data = JSON.parse(localStorage.getItem('myMapData_v3')).filter(i => i.id !== id);
-        localStorage.setItem('myMapData_v3', JSON.stringify(data));
-        renderList();
-    }}
-
-    function exportData() {
-        const data = localStorage.getItem('myMapData_v3');
-        const blob = new Blob([data], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `雲端座標備份_${new Date().toLocaleDateString()}.json`;
-        a.click();
-    }
-
-    function importData(input) {
-        const reader = new FileReader();
-        reader.onload = e => {
-            localStorage.setItem('myMapData_v3', e.target.result);
-            renderList();
-            alert("匯入成功");
-        };
-        reader.readAsText(input.files[0]);
-    }
-
-    window.onload = () => { gapiLoaded(); gisLoaded(); renderList(); };
+    window.onload = () => { gapiLoaded(); gisLoaded(); };
 </script>
+<script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+<script src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </body>
 </html>
