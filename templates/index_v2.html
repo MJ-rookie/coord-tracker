@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>明信片座標紀錄 - 比例優化版</title>
+    <style>
+        :root { --primary: #2563eb; --edit: #7c3aed; --bg: #f8fafc; --danger: #ef4444; --border: #e2e8f0; --mush: #ec4899; --flower: #f59e0b; }
+        
+        /* 鎖定全域不捲動 */
+        html, body { 
+            height: 100%; 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: -apple-system, "Noto Sans TC", sans-serif; 
+            background: var(--bg); 
+            color: #1e293b;
+        }
+
+        .main-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            align-items: center;
+            padding: 8px; /* 縮小邊距 */
+            box-sizing: border-box;
+        }
+        
+        .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; height: 100%; }
+        
+        /* 上方卡片：極簡化處理，移除捲動條 */
+        .card { 
+            background: white; 
+            padding: 12px; /* 縮小 Padding */
+            border-radius: 16px; 
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); 
+            margin-bottom: 12px; 
+            box-sizing: border-box;
+            flex-shrink: 0; 
+        }
+        
+        h2 { margin: 0 0 8px 0; color: var(--primary); text-align: center; font-size: 1.2rem; }
+        .edit-mode-title { color: var(--edit) !important; }
+        
+        label { font-size: 0.75rem; color: #64748b; margin-bottom: 2px; display: block; margin-top: 4px; }
+        
+        input, select, button { 
+            width: 100%; padding: 8px; /* 縮小輸入框高度 */
+            margin-bottom: 6px; 
+            border: 1px solid var(--border); border-radius: 8px; 
+            box-sizing: border-box; font-size: 0.9rem;
+        }
+        
+        button { 
+            background: var(--primary); color: white; border: none; 
+            cursor: pointer; font-weight: bold; transition: 0.2s; margin-top: 2px;
+        }
+        
+        .btn-update { background: var(--edit); }
+        .btn-cancel { background: #94a3b8; }
+        
+        /* 預覽圖高度限制在 100px 以內 */
+        #preview-container {
+            width: 100%; max-height: 100px; 
+            margin-top: 4px; display: none; 
+            border-radius: 8px; overflow: hidden;
+            border: 1px solid var(--border); background: #eee;
+        }
+        #preview { width: 100%; height: auto; max-height: 100px; display: block; object-fit: contain; }
+        
+        /* 下方清單：最大化捲動區 */
+        #recordList { 
+            flex-grow: 1; 
+            overflow-y: auto; 
+            padding-bottom: 10px;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .item-card { 
+            background: white; border-radius: 12px; 
+            overflow: hidden; margin-bottom: 15px; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); 
+            border: 1px solid var(--border);
+        }
+        
+        .item-card img { width: 100%; height: auto; display: block; background: #f1f5f9; }
+        
+        .item-info { padding: 12px; border-top: 1px solid var(--border); }
+        .item-text h3 { margin: 0; font-size: 1rem; color: #0f172a; display: flex; align-items: center; gap: 6px; }
+        
+        .badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 20px; color: white; font-weight: normal; }
+        .badge-mush { background: var(--mush); }
+        .badge-flower { background: var(--flower); }
+
+        .item-text p { color: #64748b; font-size: 0.8rem; margin: 4px 0 0 0; }
+        .item-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .btn-small { width: auto; padding: 5px 12px; font-size: 0.75rem; margin: 0; flex: 1; }
+        .btn-edit-action { background: var(--edit); }
+        .btn-delete-action { background: var(--danger); }
+        
+        .tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px; }
+        .btn-export { background: #059669; font-size: 0.8rem; }
+        .btn-import { background: #f59e0b; font-size: 0.8rem; }
+        
+        #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); color: var(--primary); justify-content: center; align-items: center; font-weight: bold; z-index: 1000; }
+    </style>
+</head>
+<body>
+
+<div id="loading-overlay">處理中...</div>
+
+<div class="main-wrapper">
+    <div class="container">
+        <div class="card">
+            <h2 id="form-title">📍 明信片座標紀錄</h2>
+            
+            <label>明信片地點名稱</label>
+            <input type="text" id="locName" placeholder="地點名稱">
+            
+            <label>明信片類別</label>
+            <select id="category">
+                <option value="菇">🍄 菇類</option>
+                <option value="花">🌸 花卉</option>
+            </select>
+            
+            <div style="display: flex; gap: 8px;">
+                <div style="flex: 1;">
+                    <label>緯度</label>
+                    <input type="number" id="lat" placeholder="緯度" step="any">
+                </div>
+                <div style="flex: 1;">
+                    <label>經度</label>
+                    <input type="number" id="lng" placeholder="經度" step="any">
+                </div>
+            </div>
+            
+            <label>明信片檔案上傳</label>
+            <input type="file" id="fileInput" accept="image/*" onchange="processImage(this)">
+            
+            <div id="preview-container">
+                <img id="preview">
+            </div>
+            
+            <button id="save-btn" onclick="saveRecord()" style="margin-top: 5px;">✅ 儲存這筆紀錄</button>
+            <button id="cancel-btn" class="btn-cancel" onclick="cancelEdit()" style="display: none;">❌ 取消修改</button>
+
+            <div class="tools">
+                <button class="btn-export" onclick="exportData()">📤 匯出</button>
+                <button class="btn-import" onclick="document.getElementById('importFile').click()">📥 匯入</button>
+            </div>
+            <input type="file" id="importFile" style="display: none;" accept=".json" onchange="importData(this)">
+            <button onclick="clearAllData()" style="background: none; border:none; color: #94a3b8; font-size: 0.6rem; cursor:pointer; text-decoration: underline; margin-top: 5px;">清除所有紀錄</button>
+        </div>
+
+        <div id="recordList"></div>
+    </div>
+</div>
+
+<script>
+    let finalBase64Image = "";
+    let editingId = null;
+    const overlay = document.getElementById('loading-overlay');
+
+    function processImage(input) {
+        const file = input.files[0];
+        if (!file) return;
+        overlay.style.display = 'flex';
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width, height = img.height;
+                const MAX_LENGTH = 1024; 
+                if (width > height) { if (width > MAX_LENGTH) { height *= MAX_LENGTH / width; width = MAX_LENGTH; } }
+                else { if (height > MAX_LENGTH) { width *= MAX_LENGTH / height; height = MAX_LENGTH; } }
+                canvas.width = width; canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                finalBase64Image = canvas.toDataURL('image/jpeg', 0.6);
+                document.getElementById('preview').src = finalBase64Image;
+                document.getElementById('preview-container').style.display = 'block';
+                overlay.style.display = 'none';
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function startEdit(id) {
+        const data = JSON.parse(localStorage.getItem('myMapData_v3') || '[]');
+        const item = data.find(r => r.id === id);
+        if (!item) return;
+
+        editingId = id;
+        document.getElementById('locName').value = item.name;
+        document.getElementById('category').value = item.category || '菇'; 
+        document.getElementById('lat').value = item.lat;
+        document.getElementById('lng').value = item.lng;
+        
+        if (item.image) {
+            finalBase64Image = item.image;
+            document.getElementById('preview').src = item.image;
+            document.getElementById('preview-container').style.display = 'block';
+        }
+
+        document.getElementById('form-title').innerText = "✏️ 正在修改紀錄";
+        document.getElementById('form-title').classList.add('edit-mode-title');
+        document.getElementById('save-btn').innerText = "💾 更新紀錄內容";
+        document.getElementById('save-btn').classList.add('btn-update');
+        document.getElementById('cancel-btn').style.display = 'block';
+    }
+
+    function cancelEdit() {
+        editingId = null;
+        clearInputForm();
+        document.getElementById('form-title').innerText = "📍 明信片座標紀錄";
+        document.getElementById('form-title').classList.remove('edit-mode-title');
+        document.getElementById('save-btn').innerText = "✅ 儲存這筆紀錄";
+        document.getElementById('save-btn').classList.remove('btn-update');
+        document.getElementById('cancel-btn').style.display = 'none';
+    }
+
+    function saveRecord() {
+        const name = document.getElementById('locName').value;
+        const category = document.getElementById('category').value;
+        const lat = document.getElementById('lat').value;
+        const lng = document.getElementById('lng').value;
+
+        if (!name || !lat || !lng) return alert("請填寫完整資訊");
+
+        let data = JSON.parse(localStorage.getItem('myMapData_v3') || '[]');
+
+        if (editingId) {
+            const index = data.findIndex(r => r.id === editingId);
+            if (index !== -1) {
+                data[index].name = name;
+                data[index].category = category;
+                data[index].lat = lat;
+                data[index].lng = lng;
+                data[index].image = finalBase64Image;
+                data[index].updateTime = new Date().toLocaleString() + " (已修改)";
+            }
+        } else {
+            data.push({
+                id: Date.now(),
+                name: name,
+                category: category,
+                lat: lat,
+                lng: lng,
+                image: finalBase64Image,
+                time: new Date().toLocaleString()
+            });
+        }
+
+        localStorage.setItem('myMapData_v3', JSON.stringify(data));
+        cancelEdit();
+        renderList();
+    }
+
+    function renderList() {
+        const data = JSON.parse(localStorage.getItem('myMapData_v3') || '[]');
+        const list = document.getElementById('recordList');
+        list.innerHTML = data.slice().reverse().map(r => `
+            <div class="item-card">
+                ${r.image ? `<img src="${r.image}" loading="lazy">` : ''}
+                <div class="item-info">
+                    <div class="item-text">
+                        <h3>
+                            ${r.name} 
+                            <span class="badge ${r.category === '菇' ? 'badge-mush' : 'badge-flower'}">
+                                ${r.category === '菇' ? '🍄 菇' : '🌸 花'}
+                            </span>
+                        </h3>
+                        <p>🌐 ${r.lat}, ${r.lng}</p>
+                        <p style="font-size:0.65rem; color:#a1a1aa; margin-top:2px;">📅 ${r.updateTime || r.time}</p>
+                    </div>
+                    <div class="item-actions">
+                        <button class="btn-small btn-edit-action" onclick="startEdit(${r.id})">修改</button>
+                        <button class="btn-small btn-delete-action" onclick="deleteItem(${r.id})">刪除</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function deleteItem(id) {
+        if (!confirm("確定刪除？")) return;
+        let data = JSON.parse(localStorage.getItem('myMapData_v3') || '[]');
+        data = data.filter(i => i.id !== id);
+        localStorage.setItem('myMapData_v3', JSON.stringify(data));
+        renderList();
+    }
+
+    function exportData() {
+        const data = localStorage.getItem('myMapData_v3');
+        if (!data) return alert("沒資料");
+        const blob = new Blob([data], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `座標備份_${new Date().toLocaleDateString()}.json`;
+        a.click();
+    }
+
+    function importData(input) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                const imported = JSON.parse(e.target.result);
+                localStorage.setItem('myMapData_v3', JSON.stringify(imported));
+                renderList();
+                alert("匯入成功");
+            } catch (err) { alert("檔案錯誤"); }
+        };
+        reader.readAsText(file);
+    }
+
+    function clearInputForm() {
+        document.getElementById('locName').value = "";
+        document.getElementById('category').value = "菇";
+        document.getElementById('lat').value = "";
+        document.getElementById('lng').value = "";
+        document.getElementById('fileInput').value = "";
+        document.getElementById('preview-container').style.display = 'none';
+        finalBase64Image = "";
+    }
+
+    function clearAllData() {
+        if (!confirm("確定要刪除所有紀錄嗎？")) return;
+        localStorage.removeItem('myMapData_v3');
+        renderList();
+    }
+
+    window.onload = renderList;
+</script>
+
+</body>
+</html>
