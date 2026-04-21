@@ -140,18 +140,11 @@
     function handleAuthClick() { tokenClient.requestAccessToken({prompt: 'consent'}); }
 
     // 建立或取得 pikmin 資料夾 ID
+    // 將原本的 getOrCreateFolder 換成這個簡單的版本
     async function getOrCreateFolder() {
-        const folderName = 'pikmin';
-        const response = await gapi.client.drive.files.list({
-            q: `name = '${folderName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
-            fields: 'files(id, name)',
-        });
-        const folders = response.result.files;
-        if (folders && folders.length > 0) return folders[0].id;
-        
-        const metadata = { 'name': folderName, 'mimeType': 'application/vnd.google-apps.folder' };
-        const folderResponse = await gapi.client.drive.files.create({ resource: metadata, fields: 'id' });
-        return folderResponse.result.id;
+        // 這裡填入你剛剛在網址列複製的那個資料夾 ID
+        const SHARED_FOLDER_ID = '1NhUdriZ8lRia2sDbomYBkBTe02eOzwKs'; 
+        return SHARED_FOLDER_ID;
     }
 
     // 圖片處理
