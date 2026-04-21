@@ -143,7 +143,7 @@
     async function saveToSheet(record) {
         const values = [[ record.id, record.time, record.name, record.category, record.lat, record.lng, record.user, record.driveId ]];
         await gapi.client.sheets.spreadsheets.values.append({
-            spreadsheetId: SPREADSHEET_ID, range: 'Sheet1!A1',
+            spreadsheetId: SPREADSHEET_ID, range: '工作表1!A1',
             valueInputOption: 'RAW', resource: { values: values }
         });
     }
@@ -154,7 +154,7 @@
         document.getElementById('loading-overlay').style.display = 'flex';
         try {
             const response = await gapi.client.sheets.spreadsheets.values.get({
-                spreadsheetId: SPREADSHEET_ID, range: 'Sheet1!A2:H',
+                spreadsheetId: SPREADSHEET_ID, range: '工作表1!A2:H',
             });
             const rows = response.result.values || [];
             const data = rows.map(row => ({
