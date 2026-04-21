@@ -91,9 +91,16 @@
     let currentUserEmail = "未知帳號";
     let rawFile = null;
 
-    function gapiLoaded() { gapi.load('client', async () => {
-        await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
-    });}
+    function gapiLoaded() { 
+    gapi.load('client', async () => {
+        await gapi.client.init({ 
+            apiKey: API_KEY, 
+            discoveryDocs: DISCOVERY_DOCS 
+        });
+        // 只要 API 初始化完成，不論有沒有登入，都先抓一次資料
+        initDataSync(); 
+    });
+}
 
     function gisLoaded() {
         tokenClient = google.accounts.oauth2.initTokenClient({
@@ -167,29 +174,47 @@
     }
 
     async function saveRecord() {
-        const name = document.getElementById('locName').value;
-        const lat = document.getElementById('lat').value;
-        if (!name || !lat || !rawFile) return alert("請填寫資訊並上傳照片");
+    const name = document.getElementById('locName').value;
+    const lat = document.getElementById('lat').value;
+    if (!name || !lat || !rawFile) return alert("請填寫資訊並上傳照片");
 
-        document.getElementById('loading-overlay').style.display = 'flex';
-        try {
-            const driveId = await uploadToDrive(rawFile);
-            const newRecord = {
-                id: Date.now(),
-                time: new Date().toLocaleString(),
-                name: name,
-                category: document.getElementById('category').value,
-                lat: lat,
-                lng: document.getElementById('lng').value,
-                user: currentUserEmail,
-                driveId: driveId
-            };
-            await saveToSheet(newRecord);
-            alert("同步儲存成功！所有朋友都看得到囉！");
-            location.reload(); // 重新整理頁面顯示最新清單
-        } catch (e) { alert("儲存失敗，請檢查權限或網路"); }
-        document.getElementById('loading-overlay').style.display = 'none';
+    document.getElementById('loading-overlay').style.display = 'flex';
+    try {
+        const driveId = await uploadToDrive(rawFile);
+        const newRecord = {
+            id: Date.now(),
+            time: new Date().toLocaleString(),
+            name: name,
+            category: document.getElementById('category').value,
+            lat: lat,
+            lng: document.getElementById('lng').value,
+            user: currentUserEmail,
+            driveId: driveId
+        };
+        await saveToSheet(newRecord);
+        
+        alert("同步儲存成功！");
+        
+        // --- 修改這裡：不要用 reload，改用以下方式 ---
+        await initDataSync(); // 重新抓取 Sheets 資料更新清單
+        clearForm();         // 清空輸入欄位
+        // -------------------------------------------
+
+    } catch (e) { 
+        console.error(e);
+        alert("儲存失敗，請檢查權限或工作表名稱"); 
     }
+    document.getElementById('loading-overlay').style.display = 'none';
+}
+
+// 補上一個清空欄位的函數
+function clearForm() {
+    document.getElementById('locName').value = '';
+    document.getElementById('lat').value = '';
+    document.getElementById('lng').value = '';
+    document.getElementById('fileInput').value = '';
+    document.getElementById('preview-container').style.display = 'none';
+}
 
     function renderList(data) {
         const list = document.getElementById('recordList');
