@@ -3,46 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pikmin 多人共享大地圖</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://apis.google.com/js/api.js"></script>
+    <title>Pikmin 多人共享大地圖 v2.0</title>
     <style>
-        :root { --primary: #2563eb; --edit: #7c3aed; --bg: #f1f5f9; --danger: #ef4444; --border: #e2e8f0; --mush: #ec4899; --flower: #f59e0b; }
+        :root { --primary: #2563eb; --bg: #f1f5f9; --border: #e2e8f0; --mush: #ec4899; --flower: #f59e0b; }
+        
+        /* 基礎佈局：防止全頁捲動，改用區域捲動 */
         html, body { height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, "Noto Sans TC", sans-serif; background: var(--bg); }
+        
         .main-wrapper { display: flex; flex-direction: column; height: 100vh; padding: 10px; box-sizing: border-box; }
-        .container { width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; height: 100%; gap: 15px; }
-        @media (min-width: 768px) { .container { flex-direction: row; align-items: flex-start; } .card { width: 350px; flex-shrink: 0; } #recordList { flex-grow: 1; } }
-        .card { background: white; padding: 15px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); box-sizing: border-box; }
-        h2 { margin: 0 0 10px 0; color: var(--primary); text-align: center; font-size: 1.2rem; }
-        label { font-size: 0.8rem; color: #64748b; display: block; margin-top: 5px; }
-        input, select, button { width: 100%; padding: 10px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 0.9rem; }
-        button { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        
+        .container { 
+            width: 100%; max-width: 1200px; margin: 0 auto; 
+            display: flex; flex-direction: column; height: 100%; gap: 15px; 
+            overflow: hidden; /* 防止外層雙捲軸 */
+        }
+
+        /* 電腦版左右分欄 */
+        @media (min-width: 768px) {
+            .container { flex-direction: row; align-items: stretch; }
+            .card { width: 350px; flex-shrink: 0; overflow-y: auto; }
+            #recordList { flex-grow: 1; height: 100%; }
+        }
+
+        .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); box-sizing: border-box; }
+        h2 { margin: 0 0 15px 0; color: var(--primary); text-align: center; font-size: 1.2rem; }
+        
+        label { font-size: 0.8rem; color: #64748b; display: block; margin-top: 10px; }
+        input, select, button { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 0.9rem; }
+        
+        button { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; margin-top: 15px; }
         button:disabled { background: #cbd5e1; cursor: not-allowed; }
-        .btn-auth { background: #4285F4; }
-        #preview-container { width: 100%; max-height: 120px; display: none; border-radius: 8px; overflow: hidden; margin-bottom: 10px; border: 1px solid var(--border); }
+        .btn-auth { background: #4285F4; margin-bottom: 10px; }
+
+        /* 照片預覽 */
+        #preview-container { width: 100%; max-height: 150px; display: none; border-radius: 8px; overflow: hidden; margin-top: 10px; border: 1px solid var(--border); }
         #preview { width: 100%; height: auto; display: block; }
-        #recordList { flex-grow: 1; overflow-y: auto; padding-bottom: 20px; }
+
+        /* 右側捲動清單區域 */
+        #recordList { 
+            flex-grow: 1; 
+            overflow-y: auto; /* 關鍵：開啟捲軸 */
+            padding-bottom: 50px; 
+            min-height: 0; /* 修正 Flexbox 捲動 Bug */
+        }
+
         .item-card { background: white; border-radius: 12px; overflow: hidden; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid var(--border); }
-        .item-card img { width: 100%; cursor: pointer; background: #eee; min-height: 150px; object-fit: cover; }
+        .item-card img { width: 100%; height: 200px; object-fit: cover; cursor: pointer; background: #eee; }
         .item-info { padding: 12px; }
         .item-text h3 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 6px; }
         .badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; color: white; }
-        .user-tag { font-size: 0.7rem; color: #2563eb; margin-top: 5px; display: block; font-weight: bold; }
-        #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); color: var(--primary); justify-content: center; align-items: center; font-weight: bold; z-index: 1000; }
+        .user-tag { font-size: 0.7rem; color: #2563eb; margin-top: 8px; display: block; font-weight: bold; }
+
+        /* 載入中遮罩 */
+        #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); color: var(--primary); justify-content: center; align-items: center; font-weight: bold; z-index: 1000; flex-direction: column; gap: 10px; }
     </style>
 </head>
 <body>
 
-<div id="loading-overlay">🌐 正在同步雲端資料...</div>
+<div id="loading-overlay">
+    <div style="font-size: 2rem;">🛰️</div>
+    <div>正在同步雲端資料...</div>
+</div>
 
 <div class="main-wrapper">
     <div class="container">
         <div class="card">
             <h2>🛰️ 共享座標紀錄</h2>
-            <button id="auth_btn" class="btn-auth" onclick="handleAuthClick()">1. 連結 Google 帳號 (必做)</button>
-            <div id="user_display" style="font-size:0.7rem; color:#64748b; text-align:center; margin-top:5px;">尚未同步</div>
+            <button id="auth_btn" class="btn-auth" onclick="handleAuthClick()">1. 連結 Google 帳號</button>
+            <div id="user_display" style="font-size:0.7rem; color:#64748b; text-align:center;">尚未連線，僅能查看</div>
 
-            <hr style="margin: 15px 0; border: 0.5px solid #eee;">
+            <hr style="margin: 20px 0; border: 0.5px solid #eee;">
 
             <label>地點名稱</label>
             <input type="text" id="locName" placeholder="例如：勤美綠園道">
@@ -53,37 +83,38 @@
                 <option value="花">🌸 花卉</option>
             </select>
             
-            <label>經緯度</label>
+            <label>座標 (緯度, 經度)</label>
             <div style="display: flex; gap: 5px;">
                 <input type="number" id="lat" placeholder="緯度" step="any">
                 <input type="number" id="lng" placeholder="經度" step="any">
             </div>
             
-            <label>明信片照片</label>
+            <label>上傳照片</label>
             <input type="file" id="fileInput" accept="image/*" onchange="processImage(this)">
             <div id="preview-container"><img id="preview"></div>
             
-            <button id="save-btn" onclick="saveRecord()" disabled>✅ 儲存並同步給所有人</button>
-            <button style="background:#64748b; margin-top:10px;" onclick="initDataSync()">🔄 手動重新整理</button>
+            <button id="save-btn" onclick="saveRecord()" disabled>✅ 儲存並同步</button>
+            <button style="background:#64748b; font-size:0.7rem; padding:5px;" onclick="initDataSync()">🔄 手動重新整理清單</button>
         </div>
 
         <div id="recordList">
-            <p style="text-align:center; color:#94a3b8; margin-top:20px;">正在讀取共享看板...</p>
+            <p style="text-align:center; color:#94a3b8; margin-top:50px;">正在讀取共享看板...</p>
         </div>
     </div>
 </div>
 
 <script>
-    // --- ⚠️ 以下請填入你的設定 ---
-    const CLIENT_ID = '30705957391-knin529rrok93vikmsbv8vfbtbe5lvlg.apps.googleusercontent.com';
-    const API_KEY = 'AIzaSyACs1du7WYKyAAv20jkEP6GYHTHSbttDTg';
-    const SPREADSHEET_ID = '1vNkmtTtKrxSkH17-o_4Rmvt0eDwKaAq1dZxuRr_z2fA';
-    const SHARED_FOLDER_ID = '1NhUdriZ8lRia2sDbomYBkBTe02eOzwKs'; 
+    // --- ⚠️ 請填入你的設定 ---
+    const CLIENT_ID = '你的用戶端ID.apps.googleusercontent.com';
+    const API_KEY = '你的API金鑰';
+    const SPREADSHEET_ID = '1vNkmtTtKrxSkH17-o_4Rmvt0eDwKaAq1dZxuRr_z2fA'; // 你提供的正確ID
+    const SHARED_FOLDER_ID = '你的共享資料夾ID'; 
+    const SHEET_NAME = '工作表1'; // 確保名稱與試算表一致
     // ----------------------------
 
     const DISCOVERY_DOCS = [
         "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
-        "https://sheets.googleapis.com/$discovery/rest?version=v4" // 這是標準版網址
+        "https://sheets.googleapis.com/$discovery/rest?version=v4"
     ];
     const SCOPES = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets";
 
@@ -91,29 +122,31 @@
     let currentUserEmail = "未知帳號";
     let rawFile = null;
 
-    function gapiLoaded() { 
-    gapi.load('client', async () => {
-        await gapi.client.init({ 
-            apiKey: API_KEY, 
-            discoveryDocs: DISCOVERY_DOCS 
+    // 初始化 Google API
+    function gapiLoaded() {
+        gapi.load('client', async () => {
+            await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
+            initDataSync(); // 一進網頁就先抓資料
         });
-        // 只要 API 初始化完成，不論有沒有登入，都先抓一次資料
-        initDataSync(); 
-    });
-}
+    }
 
+    // 初始化 Google 身分驗證 (GIS)
     function gisLoaded() {
         tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: CLIENT_ID, scope: SCOPES, callback: async (resp) => {
+            client_id: CLIENT_ID,
+            scope: SCOPES,
+            ux_mode: 'popup',
+            callback: async (resp) => {
                 if (resp.error) return;
                 const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
                     headers: { Authorization: `Bearer ${resp.access_token}` }
                 }).then(res => res.json());
+                
                 currentUserEmail = userInfo.email;
-                document.getElementById('user_display').innerText = `已同步：${currentUserEmail}`;
-                document.getElementById('auth_btn').innerText = "✅ 雲端已連線";
+                document.getElementById('user_display').innerText = `已連線：${currentUserEmail}`;
+                document.getElementById('auth_btn').innerText = "✅ 驗證成功";
                 document.getElementById('save-btn').disabled = false;
-                initDataSync(); // 登入後自動抓取資料
+                initDataSync(); 
             }
         });
     }
@@ -131,7 +164,6 @@
         reader.readAsDataURL(rawFile);
     }
 
-    // [寫入雲端硬碟]
     async function uploadToDrive(file) {
         const metadata = { 'name': `Pikmin_${Date.now()}.jpg`, 'mimeType': 'image/jpeg', 'parents': [SHARED_FOLDER_ID] };
         const formData = new FormData();
@@ -146,22 +178,23 @@
         return res.id;
     }
 
-    // [寫入 Google Sheets]
     async function saveToSheet(record) {
         const values = [[ record.id, record.time, record.name, record.category, record.lat, record.lng, record.user, record.driveId ]];
         await gapi.client.sheets.spreadsheets.values.append({
-            spreadsheetId: SPREADSHEET_ID, range: '工作表1!A1',
-            valueInputOption: 'RAW', resource: { values: values }
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${SHEET_NAME}!A1`,
+            valueInputOption: 'RAW',
+            resource: { values: values }
         });
     }
 
-    // [從 Google Sheets 抓取所有資料]
     async function initDataSync() {
         if (!gapi.client.sheets) return;
         document.getElementById('loading-overlay').style.display = 'flex';
         try {
             const response = await gapi.client.sheets.spreadsheets.values.get({
-                spreadsheetId: SPREADSHEET_ID, range: '工作表1!A2:H',
+                spreadsheetId: SPREADSHEET_ID,
+                range: `${SHEET_NAME}!A2:H`,
             });
             const rows = response.result.values || [];
             const data = rows.map(row => ({
@@ -174,52 +207,50 @@
     }
 
     async function saveRecord() {
-    const name = document.getElementById('locName').value;
-    const lat = document.getElementById('lat').value;
-    if (!name || !lat || !rawFile) return alert("請填寫資訊並上傳照片");
+        const name = document.getElementById('locName').value;
+        const lat = document.getElementById('lat').value;
+        if (!name || !lat || !rawFile) return alert("請填寫名稱、座標並選取照片");
 
-    document.getElementById('loading-overlay').style.display = 'flex';
-    try {
-        const driveId = await uploadToDrive(rawFile);
-        const newRecord = {
-            id: Date.now(),
-            time: new Date().toLocaleString(),
-            name: name,
-            category: document.getElementById('category').value,
-            lat: lat,
-            lng: document.getElementById('lng').value,
-            user: currentUserEmail,
-            driveId: driveId
-        };
-        await saveToSheet(newRecord);
-        
-        alert("同步儲存成功！");
-        
-        // --- 修改這裡：不要用 reload，改用以下方式 ---
-        await initDataSync(); // 重新抓取 Sheets 資料更新清單
-        clearForm();         // 清空輸入欄位
-        // -------------------------------------------
+        document.getElementById('loading-overlay').style.display = 'flex';
+        try {
+            const driveId = await uploadToDrive(rawFile);
+            const newRecord = {
+                id: Date.now(),
+                time: new Date().toLocaleString(),
+                name: name,
+                category: document.getElementById('category').value,
+                lat: lat,
+                lng: document.getElementById('lng').value,
+                user: currentUserEmail,
+                driveId: driveId
+            };
+            await saveToSheet(newRecord);
+            alert("同步成功！");
+            
+            // 局部更新，不重刷頁面
+            clearForm();
+            await initDataSync(); 
 
-    } catch (e) { 
-        console.error(e);
-        alert("儲存失敗，請檢查權限或工作表名稱"); 
+        } catch (e) { 
+            console.error(e);
+            alert("儲存失敗，請確認登入時是否勾選了『試算表編輯』權限"); 
+        }
+        document.getElementById('loading-overlay').style.display = 'none';
     }
-    document.getElementById('loading-overlay').style.display = 'none';
-}
 
-// 補上一個清空欄位的函數
-function clearForm() {
-    document.getElementById('locName').value = '';
-    document.getElementById('lat').value = '';
-    document.getElementById('lng').value = '';
-    document.getElementById('fileInput').value = '';
-    document.getElementById('preview-container').style.display = 'none';
-}
+    function clearForm() {
+        document.getElementById('locName').value = '';
+        document.getElementById('lat').value = '';
+        document.getElementById('lng').value = '';
+        document.getElementById('fileInput').value = '';
+        document.getElementById('preview-container').style.display = 'none';
+        rawFile = null;
+    }
 
     function renderList(data) {
         const list = document.getElementById('recordList');
         if (data.length === 0) {
-            list.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:20px;">目前還沒有任何共享紀錄</p>';
+            list.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:50px;">📭 目前還沒有共享紀錄</p>';
             return;
         }
         list.innerHTML = data.slice().reverse().map(r => `
@@ -228,17 +259,15 @@ function clearForm() {
                      onclick="window.open('https://drive.google.com/file/d/${r.driveId}/view')">
                 <div class="item-info">
                     <div class="item-text">
-                        <h3>${r.name} <span class="badge ${r.category === '菇' ? 'badge-mush' : 'badge-flower'}" style="background:${r.category === '菇' ? '#ec4899' : '#f59e0b'}">${r.category}</span></h3>
-                        <p style="font-size:0.75rem; color:#64748b; margin:5px 0;">🌐 座標：${r.lat}, ${r.lng}</p>
-                        <p style="font-size:0.6rem; color:#a1a1aa;">📅 時間：${r.time}</p>
+                        <h3>${r.name} <span class="badge" style="background:${r.category === '菇' ? '#ec4899' : '#f59e0b'}">${r.category}</span></h3>
+                        <p style="font-size:0.8rem; color:#64748b; margin:8px 0;">🌐 座標：${r.lat}, ${r.lng}</p>
                         <span class="user-tag">👤 紀錄者：${r.user}</span>
+                        <p style="font-size:0.6rem; color:#a1a1aa; margin-top:5px;">📅 ${r.time}</p>
                     </div>
                 </div>
             </div>
         `).join('');
     }
-
-    window.onload = () => { gapiLoaded(); gisLoaded(); };
 </script>
 <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
 <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
