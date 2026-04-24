@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pikmin 共享任務地圖 v2.5</title>
+    <title>Pikmin 共享任務地圖 v2.7</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     <style>
@@ -15,66 +15,81 @@
         
         @media (min-width: 768px) { .container { flex-direction: row; align-items: stretch; } .card { width: 350px; flex-shrink: 0; overflow-y: auto; } #recordList { flex-grow: 1; height: 100%; } }
         
-        .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); box-sizing: border-box; }
+        .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); box-sizing: border-box; margin-bottom: 10px; }
         h2 { margin: 0 0 10px 0; color: var(--primary); text-align: center; font-size: 1.2rem; }
         label { font-size: 0.8rem; color: #64748b; display: block; margin-top: 10px; }
-        input, select, button { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 0.9rem; }
+        input, select, button { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 0.9rem; }
         button { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; margin-top: 10px; }
         .btn-danger { background: var(--danger) !important; }
         .btn-auth { background: #4285F4; margin-bottom: 5px; }
 
+        /* 篩選器樣式 */
+        .filter-section { background:#f8fafc; padding:12px; border-radius:12px; border:1px solid var(--border); margin-bottom: 15px; }
+        .filter-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .filter-chip { display: flex; align-items: center; gap: 5px; background: white; border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; cursor: pointer; user-select: none; transition: 0.2s; }
+        .filter-chip:hover { border-color: var(--primary); }
+        .filter-chip input { width: auto; margin: 0; cursor: pointer; }
+
         #recordList { flex-grow: 1; overflow-y: auto; padding: 0 10px 50px 0; min-height: 0; }
         
-        /* 明信片樣式更新 */
         .item-card { background: white; border-radius: 12px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid var(--border); transition: 0.3s; position: relative; }
-        .item-card img { width: 100%; height: 250px; object-fit: contain; background: #f8fafc; display: block; }
+        .item-card img { width: 100%; height: 250px; object-fit: contain; background: #f8fafc; display: block; cursor: pointer; }
         
-        /* 已拿到狀態：變淡並顯示打勾 */
-        .item-card.obtained { opacity: 0.6; filter: grayscale(30%); border: 2px solid var(--success); }
-        .obtained-stamp { position: absolute; top: 10px; right: 10px; background: var(--success); color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        /* 已拿到狀態 */
+        .item-card.obtained { border: 2px solid var(--success); background: #f0fdf4; }
+        .obtained-stamp { position: absolute; top: 10px; right: 10px; background: var(--success); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .item-card.obtained .obtained-stamp { display: block; }
 
         .item-info { padding: 15px; }
         .badge { font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; color: white; display: inline-flex; align-items: center; gap: 4px; font-weight: bold; }
         
-        /* 勾選區塊樣式 */
-        .check-area { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #eee; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: #1e293b; cursor: pointer; }
-        .check-area input[type="checkbox"] { width: 18px; height: 18px; margin: 0; cursor: pointer; }
+        .check-area { margin-top: 12px; padding: 10px; background: #f1f5f9; border-radius: 8px; display: flex; align-items: center; gap: 10px; font-size: 0.85rem; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
+        .check-area:hover { border-color: var(--primary); background: #e2e8f0; }
+        .check-area input { width: 18px; height: 18px; margin: 0; cursor: pointer; }
 
-        .action-btns { display: flex; gap: 8px; margin-top: 12px; }
-        .action-btns button { flex: 1; padding: 8px; font-size: 0.8rem; margin-top: 0; }
+        .action-btns { display: flex; gap: 8px; margin-top: 12px; border-top: 1px solid #eee; padding-top: 12px; }
+        .action-btns button { flex: 1; padding: 8px; font-size: 0.75rem; margin-top: 0; }
 
         #cropper-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 3000; align-items: center; justify-content: center; flex-direction: column; }
-        .cropper-box { width: 90%; max-width: 600px; background: white; padding: 10px; border-radius: 8px; }
-        #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 4000; justify-content: center; align-items: center; font-weight: bold; flex-direction: column; }
+        .cropper-box { width: 95%; max-width: 600px; background: white; padding: 15px; border-radius: 12px; }
+        #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 4000; justify-content: center; align-items: center; font-weight: bold; flex-direction: column; gap: 10px; }
     </style>
 </head>
 <body>
 
-<div id="cropper-modal"><div class="cropper-box"><div style="max-height:70vh; overflow:hidden;"><img id="cropper-img" src=""></div><div style="display:flex; gap:10px; margin-top:10px;"><button onclick="confirmCrop()">✅ 確定裁切</button><button style="background:#64748b;" onclick="closeCropper()">取消</button></div></div></div>
-<div id="loading-overlay">⌛ 同步中...</div>
+<div id="cropper-modal"><div class="cropper-box"><div style="max-height:70vh; overflow:hidden;"><img id="cropper-img" src=""></div><div style="display:flex; gap:10px; margin-top:15px;"><button onclick="confirmCrop()" style="flex:1;">✅ 確定裁切</button><button style="background:#64748b; flex:1;" onclick="closeCropper()">取消</button></div></div></div>
+<div id="loading-overlay">⌛ 正在同步雲端進度...</div>
 
 <div class="main-wrapper">
     <div class="container">
         <div class="card">
-            <h2 id="form-title">🛰️ 採點任務</h2>
-            <button id="auth_btn" class="btn-auth" onclick="handleAuthClick()">1. 連結 Google 帳號</button>
-            <div id="user_display" style="font-size:0.7rem; color:#64748b; text-align:center;">尚未連線</div>
+            <h2 id="form-title">🛰️ 採點任務管理</h2>
+            <button id="auth_btn" class="btn-auth" onclick="handleAuthClick()">連結 Google 帳號</button>
+            <div id="user_display" style="font-size:0.7rem; color:#64748b; text-align:center; margin-bottom:10px;">尚未連線</div>
+            
+            <div class="filter-section">
+                <label style="margin-top:0; font-weight:bold; color:var(--primary);">🔍 多選篩選器</label>
+                <div class="filter-group">
+                    <label class="filter-chip"><input type="checkbox" checked onchange="updateFilters()" value="菇"> 🍄 菇類</label>
+                    <label class="filter-chip"><input type="checkbox" checked onchange="updateFilters()" value="花"> 🌸 花卉</label>
+                    <label class="filter-chip"><input type="checkbox" checked onchange="updateFilters()" value="GOT"> ✅ 已拿到</label>
+                    <label class="filter-chip"><input type="checkbox" checked onchange="updateFilters()" value="NOT"> ❓ 未拿到</label>
+                </div>
+            </div>
+
+            <hr style="margin: 15px 0; border: 0.5px solid #eee;">
+
             <input type="hidden" id="edit-id">
-            <label>地點名稱</label>
-            <input type="text" id="locName">
-            <label>類別</label>
-            <select id="category"><option value="菇">🍄 菇類</option><option value="花">🌸 花卉</option></select>
-            <label>座標 (緯度, 經度)</label>
-            <div style="display:flex; gap:5px;"><input type="number" id="lat" placeholder="緯度" step="any"><input type="number" id="lng" placeholder="經度" step="any"></div>
-            <label>照片裁切</label>
-            <input type="file" id="fileInput" accept="image/*" onchange="openCropper(this)">
-            <div id="preview-container" style="display:none; margin-top:10px;"><img id="preview" style="width:100%; border:2px solid var(--primary); border-radius:8px;"></div>
+            <label>地點名稱</label><input type="text" id="locName">
+            <label>類別</label><select id="category"><option value="菇">🍄 菇類</option><option value="花">🌸 花卉</option></select>
+            <label>座標</label><div style="display:flex; gap:5px;"><input type="number" id="lat" placeholder="緯度" step="any"><input type="number" id="lng" placeholder="經度" step="any"></div>
+            <label>上傳照片</label><input type="file" id="fileInput" accept="image/*" onchange="openCropper(this)">
+            <div id="preview-container" style="display:none; margin-top:10px;"><img id="preview" style="width:100%; border-radius:8px; border:1px solid var(--border);"></div>
             <button id="save-btn" onclick="saveRecord()" disabled>✅ 儲存資料</button>
             <button id="cancel-edit-btn" style="background:#64748b; display:none;" onclick="cancelEdit()">取消修改</button>
         </div>
 
-        <div id="recordList"><p style="text-align:center; color:#94a3b8; margin-top:50px;">同步中...</p></div>
+        <div id="recordList">載入同步資料中...</div>
     </div>
 </div>
 
@@ -88,14 +103,13 @@
     const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest", "https://sheets.googleapis.com/$discovery/rest?version=v4"];
     const SCOPES = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets";
 
-    let tokenClient, currentUserEmail = "", cropper = null, croppedBlob = null, isEditing = false;
+    let tokenClient, currentUserEmail = "", cropper = null, croppedBlob = null, isEditing = false, allData = [];
 
     function gapiLoaded() { gapi.load('client', async () => { await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS }); initDataSync(); }); }
 
     function gisLoaded() {
         tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID, scope: SCOPES, callback: (resp) => {
-                if (resp.error) return;
                 localStorage.setItem('pikmin_token', resp.access_token);
                 fetchUserInfo(resp.access_token);
             }
@@ -110,15 +124,14 @@
             if(userInfo.email) {
                 currentUserEmail = userInfo.email;
                 document.getElementById('user_display').innerText = `已連線：${currentUserEmail}`;
-                document.getElementById('auth_btn').innerText = "✅ 帳號已連結";
                 document.getElementById('save-btn').disabled = false;
                 gapi.client.setToken({ access_token: token });
-                initDataSync(); // 重新整理以啟用勾選框
+                initDataSync(); 
             }
         } catch(e) { localStorage.removeItem('pikmin_token'); }
     }
 
-    // --- 核心功能：切換「已拿到」狀態 ---
+    // --- 核心功能：切換雲端同步進度 ---
     async function toggleObtained(id, currentState) {
         if (!currentUserEmail) return alert("請先登入帳號才能更新進度！");
         
@@ -128,19 +141,77 @@
             const rowIndex = res.result.values.findIndex(row => row[0] == id);
             
             if (rowIndex !== -1) {
-                const newState = currentState === 'TRUE' ? 'FALSE' : 'TRUE';
+                const newState = (currentState === 'TRUE') ? 'FALSE' : 'TRUE';
                 await gapi.client.sheets.spreadsheets.values.update({
                     spreadsheetId: SPREADSHEET_ID,
-                    range: `${SHEET_NAME}!I${rowIndex + 1}`, // 第 9 欄
+                    range: `${SHEET_NAME}!I${rowIndex + 1}`, // 修改第 9 欄 (Column I)
                     valueInputOption: 'RAW',
                     resource: { values: [[newState]] }
                 });
                 await initDataSync();
             }
-        } catch(e) { alert("更新失敗，請確認權限"); }
+        } catch(e) { alert("同步失敗，請確認登入時有勾選『試算表編輯』權限"); }
         document.getElementById('loading-overlay').style.display = 'none';
     }
 
+    function updateFilters() { renderList(allData); }
+
+    function renderList(data) {
+        allData = data;
+        const listEl = document.getElementById('recordList');
+        const filters = Array.from(document.querySelectorAll('.filter-group input:checked')).map(el => el.value);
+        
+        const filtered = data.filter(r => {
+            const isGot = (r.obtained === 'TRUE');
+            const catMatch = filters.includes(r.cat);
+            const statusMatch = (isGot && filters.includes('GOT')) || (!isGot && filters.includes('NOT'));
+            return catMatch && statusMatch;
+        });
+
+        if (filtered.length === 0) { listEl.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:50px;">沒有符合篩選條件的紀錄</p>'; return; }
+        
+        listEl.innerHTML = filtered.slice().reverse().map(r => {
+            const isGot = (r.obtained === 'TRUE');
+            return `
+                <div class="item-card ${isGot ? 'obtained' : ''}">
+                    <div class="obtained-stamp">✨ 團隊已拿到</div>
+                    <img src="https://drive.google.com/thumbnail?id=${r.driveId}&sz=w800" onclick="window.open('https://drive.google.com/file/d/${r.driveId}/view')">
+                    <div class="item-info">
+                        <h3>${r.name} <span class="badge" style="background:${r.cat === '菇' ? '#ec4899' : '#f59e0b'}">${r.cat === '菇' ? '🍄 菇類' : '🌸 花卉'}</span></h3>
+                        <p style="font-size:0.8rem; color:#64748b; margin:6px 0;">🌐 座標：${r.lat}, ${r.lng}</p>
+                        <span style="font-size:0.7rem; color:var(--primary); font-weight:bold;">👤 紀錄者：${r.user}</span>
+                        
+                        <div class="check-area" onclick="toggleObtained('${r.id}', '${r.obtained}')">
+                            <input type="checkbox" ${isGot ? 'checked' : ''} ${!currentUserEmail ? 'disabled' : ''}>
+                            <span style="font-weight:${isGot?'bold':'normal'}; color:${isGot?'var(--success)':'inherit'};">
+                                ${isGot ? '團隊已完成採點！' : '點我同步標記「已拿到」'}
+                            </span>
+                        </div>
+
+                        <div class="action-btns">
+                            <button onclick="startEdit('${r.id}','${r.name}','${r.cat}','${r.lat}','${r.lng}','${r.driveId}')">🔧 修改內容</button>
+                            <button class="btn-danger" onclick="deleteRecord('${r.id}','${r.driveId}')">🗑️ 刪除</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function initDataSync() {
+        if (!gapi.client.sheets) return;
+        try {
+            // 讀取 A 到 I 欄 (包含第 9 欄進度)
+            const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_NAME}!A2:I` });
+            const data = (res.result.values || []).map(row => ({ 
+                id: row[0], time: row[1], name: row[2], cat: row[3], lat: row[4], lng: row[5], user: row[6], driveId: row[7],
+                obtained: row[8] || 'FALSE'
+            }));
+            renderList(data);
+        } catch(e) { console.error("同步失敗", e); }
+    }
+
+    // --- 圖片裁切與其他功能 ---
     function openCropper(input) {
         const file = input.files[0]; if (!file) return;
         const reader = new FileReader();
@@ -159,19 +230,6 @@
     }
 
     function closeCropper() { document.getElementById('cropper-modal').style.display = 'none'; if(cropper) cropper.destroy(); }
-
-    async function deleteRecord(id, driveId) {
-        if (!confirm("確定要刪除這筆紀錄嗎？")) return;
-        document.getElementById('loading-overlay').style.display = 'flex';
-        try {
-            await gapi.client.drive.files.delete({ fileId: driveId });
-            const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_NAME}!A:A` });
-            const rowIndex = res.result.values.findIndex(row => row[0] == id);
-            if (rowIndex !== -1) { await gapi.client.sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, resource: { requests: [{ deleteDimension: { range: { sheetId: 0, dimension: "ROWS", startIndex: rowIndex, endIndex: rowIndex + 1 } } }] } }); }
-            await initDataSync();
-        } catch(e) { alert("操作失敗"); }
-        document.getElementById('loading-overlay').style.display = 'none';
-    }
 
     async function saveRecord() {
         const name = document.getElementById('locName').value; const lat = document.getElementById('lat').value;
@@ -205,46 +263,21 @@
         document.getElementById('loading-overlay').style.display = 'none';
     }
 
-    async function initDataSync() {
-        if (!gapi.client.sheets) return;
+    async function deleteRecord(id, driveId) {
+        if (!confirm("確定要刪除這筆紀錄嗎？")) return;
+        document.getElementById('loading-overlay').style.display = 'flex';
         try {
-            const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_NAME}!A2:I` });
-            const data = (res.result.values || []).map(row => ({ 
-                id: row[0], time: row[1], name: row[2], cat: row[3], lat: row[4], lng: row[5], user: row[6], driveId: row[7], 
-                obtained: row[8] || 'FALSE' 
-            }));
-            renderList(data);
-        } catch(e) {}
+            await gapi.client.drive.files.delete({ fileId: driveId });
+            const res = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: SPREADSHEET_ID, range: `${SHEET_NAME}!A:A` });
+            const rowIndex = res.result.values.findIndex(row => row[0] == id);
+            if (rowIndex !== -1) { await gapi.client.sheets.spreadsheets.batchUpdate({ spreadsheetId: SPREADSHEET_ID, resource: { requests: [{ deleteDimension: { range: { sheetId: 0, dimension: "ROWS", startIndex: rowIndex, endIndex: rowIndex + 1 } } }] } }); }
+            await initDataSync();
+        } catch(e) { alert("操作失敗"); }
+        document.getElementById('loading-overlay').style.display = 'none';
     }
 
-    function renderList(data) {
-        const list = document.getElementById('recordList');
-        if (data.length === 0) { list.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:50px;">目前尚無紀錄</p>'; return; }
-        list.innerHTML = data.slice().reverse().map(r => `
-            <div class="item-card ${r.obtained === 'TRUE' ? 'obtained' : ''}">
-                <div class="obtained-stamp">✨ 已拿到</div>
-                <img src="https://drive.google.com/thumbnail?id=${r.driveId}&sz=w800" onclick="window.open('https://drive.google.com/file/d/${r.driveId}/view')">
-                <div class="item-info">
-                    <h3>${r.name} <span class="badge" style="background:${r.cat === '菇' ? '#ec4899' : '#f59e0b'}">${r.cat === '菇' ? '🍄 菇類' : '🌸 花卉'}</span></h3>
-                    <p style="font-size:0.8rem; color:#64748b; margin:8px 0;">🌐 座標：${r.lat}, ${r.lng}</p>
-                    <span class="user-tag" style="font-size:0.7rem; color:var(--primary); font-weight:bold;">👤 ${r.user}</span>
-                    
-                    <div class="check-area" onclick="toggleObtained('${r.id}', '${r.obtained}')">
-                        <input type="checkbox" ${r.obtained === 'TRUE' ? 'checked' : ''} ${!currentUserEmail ? 'disabled' : ''}>
-                        <span>${r.obtained === 'TRUE' ? '<b>我已拿到這個了！</b>' : '尚未拿到 (點此勾選)'}</span>
-                    </div>
-
-                    <div class="action-btns">
-                        <button onclick="startEdit('${r.id}','${r.name}','${r.cat}','${r.lat}','${r.lng}','${r.driveId}')">🔧 修改</button>
-                        <button class="btn-danger" onclick="deleteRecord('${r.id}','${r.driveId}')">🗑️ 刪除</button>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    function startEdit(id, name, cat, lat, lng, driveId) { isEditing = true; document.getElementById('form-title').innerText = "🔧 修改中..."; document.getElementById('edit-id').value = id; document.getElementById('locName').value = name; document.getElementById('category').value = cat; document.getElementById('lat').value = lat; document.getElementById('lng').value = lng; document.getElementById('cancel-edit-btn').style.display = 'block'; document.getElementById('save-btn').innerText = "更新資料"; window.scrollTo({ top: 0, behavior: 'smooth' }); }
-    function cancelEdit() { isEditing = false; document.getElementById('form-title').innerText = "🛰️ 採點任務"; document.getElementById('save-btn').innerText = "儲存資料"; clearForm(); document.getElementById('cancel-edit-btn').style.display = 'none'; }
+    function startEdit(id, name, cat, lat, lng, driveId) { isEditing = true; document.getElementById('form-title').innerText = "🔧 修改紀錄"; document.getElementById('edit-id').value = id; document.getElementById('locName').value = name; document.getElementById('category').value = cat; document.getElementById('lat').value = lat; document.getElementById('lng').value = lng; document.getElementById('cancel-edit-btn').style.display = 'block'; document.getElementById('save-btn').innerText = "更新資料"; window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    function cancelEdit() { isEditing = false; document.getElementById('form-title').innerText = "🛰️ 採點任務管理"; document.getElementById('save-btn').innerText = "儲存資料"; clearForm(); document.getElementById('cancel-edit-btn').style.display = 'none'; }
     function clearForm() { document.getElementById('locName').value = ''; document.getElementById('lat').value = ''; document.getElementById('lng').value = ''; document.getElementById('fileInput').value = ''; document.getElementById('preview-container').style.display = 'none'; croppedBlob = null; }
     function handleAuthClick() { tokenClient.requestAccessToken({prompt: 'consent'}); }
 </script>
