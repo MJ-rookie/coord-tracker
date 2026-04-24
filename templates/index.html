@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pikmin 共享大地圖 v2.3</title>
+    <title>Pikmin 共享大地圖 v2.4</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     <style>
@@ -34,25 +34,37 @@
         .btn-danger { background: var(--danger) !important; }
         .btn-auth { background: #4285F4; margin-bottom: 5px; }
 
-        /* 關鍵修正：右側清單捲動與顯示全圖 */
+        /* 右側清單與圖片顯示設定 */
         #recordList { flex-grow: 1; overflow-y: auto; padding: 0 10px 50px 0; min-height: 0; }
-        
         .item-card { background: white; border-radius: 12px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid var(--border); }
         
-        /* 1. 顯示全圖的 CSS 設定 */
         .item-card img { 
             width: 100%; 
-            height: 300px; /* 固定高度容器 */
-            object-fit: contain; /* 核心：顯示完整圖片不裁切 */
-            background: #f8fafc; /* 缺口處顯示淡灰色背景，也可改為 #000 (黑色) */
+            height: 300px; 
+            object-fit: contain; /* 顯示全圖 */
+            background: #f8fafc; 
             display: block;
+            cursor: pointer;
         }
 
         .item-info { padding: 15px; }
+        
+        /* 類別標籤樣式 */
+        .badge { 
+            font-size: 0.75rem; 
+            padding: 3px 10px; 
+            border-radius: 20px; 
+            color: white; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 4px;
+            font-weight: bold;
+        }
+
         .action-btns { display: flex; gap: 8px; margin-top: 12px; }
         .action-btns button { flex: 1; padding: 8px; font-size: 0.8rem; margin-top: 0; }
 
-        /* 裁切視窗樣式 */
+        /* 裁切視窗 */
         #cropper-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 3000; align-items: center; justify-content: center; flex-direction: column; }
         .cropper-box { width: 90%; max-width: 600px; background: white; padding: 10px; border-radius: 8px; }
 
@@ -71,12 +83,12 @@
     </div>
 </div>
 
-<div id="loading-overlay">正在同步雲端資料...</div>
+<div id="loading-overlay">⌛ 處理中，請稍候...</div>
 
 <div class="main-wrapper">
     <div class="container">
         <div class="card">
-            <h2 id="form-title">🛰️ 新增紀錄</h2>
+            <h2 id="form-title">🛰️ 採點紀錄</h2>
             <button id="auth_btn" class="btn-auth" onclick="handleAuthClick()">1. 連結 Google 帳號</button>
             <div id="user_display" style="font-size:0.7rem; color:#64748b; text-align:center;">尚未連線</div>
 
@@ -85,10 +97,16 @@
             <label>地點名稱</label>
             <input type="text" id="locName">
             <label>類別</label>
-            <select id="category"><option value="菇">🍄 菇類</option><option value="花">🌸 花卉</option></select>
-            <label>座標</label>
-            <div style="display: flex; gap: 5px;"><input type="number" id="lat" placeholder="緯度" step="any"><input type="number" id="lng" placeholder="經度" step="any"></div>
-            <label>照片 (選取後可自由裁切)</label>
+            <select id="category">
+                <option value="菇">🍄 菇類</option>
+                <option value="花">🌸 花卉</option>
+            </select>
+            <label>座標 (緯度, 經度)</label>
+            <div style="display: flex; gap: 5px;">
+                <input type="number" id="lat" placeholder="緯度" step="any">
+                <input type="number" id="lng" placeholder="經度" step="any">
+            </div>
+            <label>照片 (可自由裁切範圍)</label>
             <input type="file" id="fileInput" accept="image/*" onchange="openCropper(this)">
             <div id="preview-container" style="display:none; margin-top:10px;">
                 <img id="preview" style="width:100%; border: 2px solid var(--primary); border-radius:8px;">
@@ -99,13 +117,12 @@
         </div>
 
         <div id="recordList">
-            <p style="text-align:center; color:#94a3b8; margin-top:50px;">載入同步清單中...</p>
+            <p style="text-align:center; color:#94a3b8; margin-top:50px;">同步中...</p>
         </div>
     </div>
 </div>
 
 <script>
-    // --- ⚠️ 系統環境變數 ---
     const CLIENT_ID = '30705957391-knin529rrok93vikmsbv8vfbtbe5lvlg.apps.googleusercontent.com';
     const API_KEY = 'AIzaSyACs1du7WYKyAAv20jkEP6GYHTHSbttDTg';
     const SPREADSHEET_ID = '1vNkmtTtKrxSkH17-o_4Rmvt0eDwKaAq1dZxuRr_z2fA';
@@ -132,7 +149,6 @@
                 fetchUserInfo(resp.access_token);
             }
         });
-        // 嘗試自動恢復登入
         const savedToken = localStorage.getItem('pikmin_token');
         if (savedToken) fetchUserInfo(savedToken);
     }
@@ -145,14 +161,13 @@
             if(userInfo.email) {
                 currentUserEmail = userInfo.email;
                 document.getElementById('user_display').innerText = `已連線：${currentUserEmail}`;
-                document.getElementById('auth_btn').innerText = "✅ 已自動登入";
+                document.getElementById('auth_btn').innerText = "✅ 自動登入成功";
                 document.getElementById('save-btn').disabled = false;
                 gapi.client.setToken({ access_token: token });
             }
         } catch(e) { localStorage.removeItem('pikmin_token'); }
     }
 
-    // --- 自由裁切邏輯 ---
     function openCropper(input) {
         const file = input.files[0];
         if (!file) return;
@@ -162,7 +177,7 @@
             img.src = e.target.result;
             document.getElementById('cropper-modal').style.display = 'flex';
             if (cropper) cropper.destroy();
-            // 2. 解除比例限制：aspectRatio 設為 NaN
+            // 自由比例裁切
             cropper = new Cropper(img, { aspectRatio: NaN, viewMode: 1 }); 
         };
         reader.readAsDataURL(file);
@@ -180,7 +195,6 @@
 
     function closeCropper() { document.getElementById('cropper-modal').style.display = 'none'; if(cropper) cropper.destroy(); }
 
-    // --- 刪除與修改邏輯 ---
     async function deleteRecord(id, driveId) {
         if (!confirm("確定要刪除這筆紀錄嗎？")) return;
         document.getElementById('loading-overlay').style.display = 'flex';
@@ -195,14 +209,14 @@
                 });
             }
             await initDataSync();
-            alert("刪除成功！");
+            alert("已刪除紀錄");
         } catch(e) { alert("刪除失敗"); }
         document.getElementById('loading-overlay').style.display = 'none';
     }
 
     function startEdit(id, name, cat, lat, lng, driveId) {
         isEditing = true;
-        document.getElementById('form-title').innerText = "🔧 修改紀錄中";
+        document.getElementById('form-title').innerText = "🔧 修改中...";
         document.getElementById('edit-id').value = id;
         document.getElementById('locName').value = name;
         document.getElementById('category').value = cat;
@@ -210,12 +224,12 @@
         document.getElementById('lng').value = lng;
         document.getElementById('cancel-edit-btn').style.display = 'block';
         document.getElementById('save-btn').innerText = "更新資料";
-        window.scrollTo(0,0);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function cancelEdit() {
         isEditing = false;
-        document.getElementById('form-title').innerText = "🛰️ 新增紀錄";
+        document.getElementById('form-title').innerText = "🛰️ 採點紀錄";
         document.getElementById('save-btn').innerText = "儲存資料";
         clearForm();
         document.getElementById('cancel-edit-btn').style.display = 'none';
@@ -224,7 +238,7 @@
     async function saveRecord() {
         const name = document.getElementById('locName').value;
         const lat = document.getElementById('lat').value;
-        if (!name || !lat) return alert("請填寫名稱與座標");
+        if (!name || !lat) return alert("請填寫必要資訊");
 
         document.getElementById('loading-overlay').style.display = 'flex';
         try {
@@ -249,15 +263,15 @@
                 await gapi.client.sheets.spreadsheets.values.update({
                     spreadsheetId: SPREADSHEET_ID, range: `${SHEET_NAME}!A${rowIndex + 1}`, valueInputOption: 'RAW', resource: { values: [updated] }
                 });
-                alert("修改成功！");
+                alert("修改完成");
                 cancelEdit();
             } else {
-                if (!croppedBlob) return alert("請選取照片並裁切");
+                if (!croppedBlob) return alert("請先處理照片");
                 const newRow = [Date.now(), new Date().toLocaleString(), name, document.getElementById('category').value, lat, document.getElementById('lng').value, currentUserEmail, driveId];
                 await gapi.client.sheets.spreadsheets.values.append({
                     spreadsheetId: SPREADSHEET_ID, range: `${SHEET_NAME}!A1`, valueInputOption: 'RAW', resource: { values: [newRow] }
                 });
-                alert("儲存成功！");
+                alert("儲存成功");
                 clearForm();
             }
             await initDataSync();
@@ -276,16 +290,21 @@
 
     function renderList(data) {
         const list = document.getElementById('recordList');
-        if (data.length === 0) { list.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:50px;">目前尚無紀錄</p>'; return; }
+        if (data.length === 0) { list.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:50px;">尚無紀錄</p>'; return; }
         list.innerHTML = data.slice().reverse().map(r => `
             <div class="item-card">
-                <img src="https://drive.google.com/thumbnail?id=${r.driveId}&sz=w800">
+                <img src="https://drive.google.com/thumbnail?id=${r.driveId}&sz=w800" onclick="window.open('https://drive.google.com/file/d/${r.driveId}/view')">
                 <div class="item-info">
-                    <h3>${r.name} <span class="badge" style="background:${r.cat === '菇' ? '#ec4899' : '#f59e0b'}">${r.cat}</span></h3>
-                    <p style="font-size:0.8rem; color:#64748b; margin:5px 0;">🌐 座標：${r.lat}, ${r.lng}</p>
-                    <span class="user-tag">👤 紀錄者：${r.user}</span>
+                    <h3>${r.name} 
+                        <span class="badge" style="background:${r.cat === '菇' ? '#ec4899' : '#f59e0b'}">
+                            ${r.cat === '菇' ? '🍄 菇類' : '🌸 花卉'}
+                        </span>
+                    </h3>
+                    <p style="font-size:0.8rem; color:#64748b; margin:8px 0;">🌐 座標：${r.lat}, ${r.lng}</p>
+                    <span class="user-tag" style="font-size:0.7rem; color:var(--primary); font-weight:bold;">👤 ${r.user}</span>
+                    <p style="font-size:0.6rem; color:#a1a1aa; margin-top:5px;">📅 ${r.time}</p>
                     <div class="action-btns">
-                        <button onclick="startEdit('${r.id}','${r.name}','${r.cat}','${r.lat}','${r.lng}','${r.driveId}')">🔧 修改內容</button>
+                        <button onclick="startEdit('${r.id}','${r.name}','${r.cat}','${r.lat}','${r.lng}','${r.driveId}')">🔧 修改</button>
                         <button class="btn-danger" onclick="deleteRecord('${r.id}','${r.driveId}')">🗑️ 刪除</button>
                     </div>
                 </div>
