@@ -3,39 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pikmin 多人共享大地圖 v2.0</title>
+    <title>Pikmin 多人共享大地圖 v2.1 (裁切強化版)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    
     <style>
         :root { --primary: #2563eb; --bg: #f1f5f9; --border: #e2e8f0; --mush: #ec4899; --flower: #f59e0b; }
         
-        /* 基礎佈局：防止全頁捲動，改用區域捲動 */
         html, body { height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, "Noto Sans TC", sans-serif; background: var(--bg); }
-        
         .main-wrapper { display: flex; flex-direction: column; height: 100vh; padding: 10px; box-sizing: border-box; }
         
         .container { 
-    width: 100%; 
-    max-width: 1200px; 
-    margin: 0 auto; 
-    display: flex; 
-    flex-direction: column; 
-    /* 這裡非常重要：限制高度為螢幕扣除 padding */
-    height: calc(100vh - 20px); 
-    gap: 15px; 
-    overflow: hidden; /* 禁止外層出現大的捲軸 */
-}
+            width: 100%; max-width: 1200px; margin: 0 auto; 
+            display: flex; flex-direction: column; height: calc(100vh - 20px); gap: 15px; 
+            overflow: hidden; 
+        }
 
-/* 2. 電腦版分欄設定 */
-@media (min-width: 768px) {
-    .container { 
-        flex-direction: row; 
-        align-items: stretch; /* 讓左右兩欄等高 */
-    }
-    .card { 
-        width: 350px; 
-        flex-shrink: 0; 
-        overflow-y: auto; /* 如果左邊輸入框太長，左邊自己捲動 */
-    }
-}
+        @media (min-width: 768px) {
+            .container { flex-direction: row; align-items: stretch; }
+            .card { width: 350px; flex-shrink: 0; overflow-y: auto; }
+            #recordList { flex-grow: 1; height: 100%; }
+        }
 
         .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); box-sizing: border-box; }
         h2 { margin: 0 0 15px 0; color: var(--primary); text-align: center; font-size: 1.2rem; }
@@ -47,38 +35,53 @@
         button:disabled { background: #cbd5e1; cursor: not-allowed; }
         .btn-auth { background: #4285F4; margin-bottom: 10px; }
 
-        /* 照片預覽 */
-        #preview-container { width: 100%; max-height: 150px; display: none; border-radius: 8px; overflow: hidden; margin-top: 10px; border: 1px solid var(--border); }
+        /* 裁切預覽區域 */
+        #preview-container { width: 100%; max-height: 200px; display: none; border-radius: 8px; overflow: hidden; margin-top: 10px; border: 2px solid var(--primary); }
         #preview { width: 100%; height: auto; display: block; }
 
-        /* 右側捲動清單區域 */
+        /* 右側捲動清單 */
         #recordList { 
-    flex-grow: 1; 
-    overflow-y: auto; /* 開啟垂直捲軸 */
-    padding: 0 10px 50px 0; /* 給捲軸一點呼吸空間 */
-    
-    /* 這是最關鍵的一行！ */
-    /* 告訴 Flexbox：不要被子元素撐開，請尊重父層的高度 */
-    min-height: 0; 
-}
+            flex-grow: 1; 
+            overflow-y: auto; 
+            padding: 0 10px 50px 0; 
+            min-height: 0; 
+        }
 
         .item-card { background: white; border-radius: 12px; overflow: hidden; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid var(--border); }
-        .item-card img { width: 100%;max-height: 400px; /* 限制明信片高度，這樣一頁能看到更多張 */object-fit: cover; cursor: pointer;  background: #eee; 
-}
+        .item-card img { width: 100%; max-height: 400px; object-fit: cover; cursor: pointer; background: #eee; }
         .item-info { padding: 12px; }
         .item-text h3 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 6px; }
         .badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; color: white; }
         .user-tag { font-size: 0.7rem; color: #2563eb; margin-top: 8px; display: block; font-weight: bold; }
 
-        /* 載入中遮罩 */
+        /* 裁切彈出視窗 (Modal) */
+        #cropper-modal { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; 
+        }
+        .cropper-box { width: 90%; max-width: 600px; background: white; padding: 10px; border-radius: 8px; }
+        .cropper-container { max-height: 70vh; overflow: hidden; }
+
         #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); color: var(--primary); justify-content: center; align-items: center; font-weight: bold; z-index: 1000; flex-direction: column; gap: 10px; }
     </style>
 </head>
 <body>
 
+<div id="cropper-modal">
+    <div class="cropper-box">
+        <div class="cropper-container">
+            <img id="cropper-img" src="">
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="confirmCrop()">確定裁切</button>
+            <button style="background: #64748b;" onclick="closeCropper()">取消</button>
+        </div>
+    </div>
+</div>
+
 <div id="loading-overlay">
     <div style="font-size: 2rem;">🛰️</div>
-    <div>正在同步雲端資料...</div>
+    <div>正在處理雲端資料...</div>
 </div>
 
 <div class="main-wrapper">
@@ -86,7 +89,7 @@
         <div class="card">
             <h2>🛰️ 共享座標紀錄</h2>
             <button id="auth_btn" class="btn-auth" onclick="handleAuthClick()">1. 連結 Google 帳號</button>
-            <div id="user_display" style="font-size:0.7rem; color:#64748b; text-align:center;">尚未連線，僅能查看</div>
+            <div id="user_display" style="font-size:0.7rem; color:#64748b; text-align:center;">尚未連線</div>
 
             <hr style="margin: 20px 0; border: 0.5px solid #eee;">
 
@@ -105,12 +108,16 @@
                 <input type="number" id="lng" placeholder="經度" step="any">
             </div>
             
-            <label>上傳照片</label>
-            <input type="file" id="fileInput" accept="image/*" onchange="processImage(this)">
-            <div id="preview-container"><img id="preview"></div>
+            <label>選擇明信片 (選取後可裁切)</label>
+            <input type="file" id="fileInput" accept="image/*" onchange="openCropper(this)">
+            
+            <div id="preview-container">
+                <label style="color:var(--primary); font-weight:bold;">裁切結果預覽：</label>
+                <img id="preview">
+            </div>
             
             <button id="save-btn" onclick="saveRecord()" disabled>✅ 儲存並同步</button>
-            <button style="background:#64748b; font-size:0.7rem; padding:5px;" onclick="initDataSync()">🔄 手動重新整理清單</button>
+            <button style="background:#64748b; font-size:0.7rem; padding:5px;" onclick="initDataSync()">🔄 重新整理清單</button>
         </div>
 
         <div id="recordList">
@@ -120,71 +127,84 @@
 </div>
 
 <script>
-    // --- ⚠️ 請填入你的設定 ---
+    // --- ⚠️ 系統變數 ---
     const CLIENT_ID = '30705957391-knin529rrok93vikmsbv8vfbtbe5lvlg.apps.googleusercontent.com';
     const API_KEY = 'AIzaSyACs1du7WYKyAAv20jkEP6GYHTHSbttDTg';
     const SPREADSHEET_ID = '1vNkmtTtKrxSkH17-o_4Rmvt0eDwKaAq1dZxuRr_z2fA';
     const SHARED_FOLDER_ID = '1NhUdriZ8lRia2sDbomYBkBTe02eOzwKs'; 
-    const SHEET_NAME = '工作表1'; // 確保名稱與試算表一致
-    // ----------------------------
+    const SHEET_NAME = '工作表1'; 
 
-    const DISCOVERY_DOCS = [
-        "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
-        "https://sheets.googleapis.com/$discovery/rest?version=v4"
-    ];
+    const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest", "https://sheets.googleapis.com/$discovery/rest?version=v4"];
     const SCOPES = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets";
 
     let tokenClient;
-    let currentUserEmail = "未知帳號";
-    let rawFile = null;
+    let currentUserEmail = "";
+    let cropper = null;
+    let croppedBlob = null; // 儲存裁切後的圖片二進制數據
 
-    // 初始化 Google API
     function gapiLoaded() {
         gapi.load('client', async () => {
             await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
-            initDataSync(); // 一進網頁就先抓資料
+            initDataSync(); 
         });
     }
 
-    // 初始化 Google 身分驗證 (GIS)
     function gisLoaded() {
         tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: CLIENT_ID,
-            scope: SCOPES,
-            ux_mode: 'popup',
+            client_id: CLIENT_ID, scope: SCOPES, ux_mode: 'popup',
             callback: async (resp) => {
                 if (resp.error) return;
                 const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
                     headers: { Authorization: `Bearer ${resp.access_token}` }
                 }).then(res => res.json());
-                
                 currentUserEmail = userInfo.email;
                 document.getElementById('user_display').innerText = `已連線：${currentUserEmail}`;
                 document.getElementById('auth_btn').innerText = "✅ 驗證成功";
                 document.getElementById('save-btn').disabled = false;
-                initDataSync(); 
             }
         });
     }
 
-    function handleAuthClick() { tokenClient.requestAccessToken({prompt: 'consent'}); }
-
-    function processImage(input) {
-        rawFile = input.files[0];
-        if (!rawFile) return;
+    // --- 裁切功能邏輯 ---
+    function openCropper(input) {
+        const file = input.files[0];
+        if (!file) return;
         const reader = new FileReader();
         reader.onload = (e) => {
-            document.getElementById('preview').src = e.target.result;
-            document.getElementById('preview-container').style.display = 'block';
+            const img = document.getElementById('cropper-img');
+            img.src = e.target.result;
+            document.getElementById('cropper-modal').style.display = 'flex';
+            if (cropper) cropper.destroy();
+            cropper = new Cropper(img, {
+                aspectRatio: 4 / 3, // 設定裁切比例
+                viewMode: 1,
+                autoCropArea: 1,
+            });
         };
-        reader.readAsDataURL(rawFile);
+        reader.readAsDataURL(file);
     }
 
-    async function uploadToDrive(file) {
+    function confirmCrop() {
+        const canvas = cropper.getCroppedCanvas({ width: 800 }); // 輸出寬度設為 800px 以節省流量
+        canvas.toBlob((blob) => {
+            croppedBlob = blob;
+            document.getElementById('preview').src = canvas.toDataURL('image/jpeg');
+            document.getElementById('preview-container').style.display = 'block';
+            closeCropper();
+        }, 'image/jpeg', 0.8);
+    }
+
+    function closeCropper() {
+        document.getElementById('cropper-modal').style.display = 'none';
+        if (cropper) cropper.destroy();
+    }
+
+    // --- 資料同步與儲存邏輯 ---
+    async function uploadToDrive(blob) {
         const metadata = { 'name': `Pikmin_${Date.now()}.jpg`, 'mimeType': 'image/jpeg', 'parents': [SHARED_FOLDER_ID] };
         const formData = new FormData();
         formData.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
-        formData.append('file', file);
+        formData.append('file', blob);
         const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
             method: 'POST',
             headers: new Headers({'Authorization': 'Bearer ' + gapi.client.getToken().access_token}),
@@ -194,42 +214,14 @@
         return res.id;
     }
 
-    async function saveToSheet(record) {
-        const values = [[ record.id, record.time, record.name, record.category, record.lat, record.lng, record.user, record.driveId ]];
-        await gapi.client.sheets.spreadsheets.values.append({
-            spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_NAME}!A1`,
-            valueInputOption: 'RAW',
-            resource: { values: values }
-        });
-    }
-
-    async function initDataSync() {
-        if (!gapi.client.sheets) return;
-        document.getElementById('loading-overlay').style.display = 'flex';
-        try {
-            const response = await gapi.client.sheets.spreadsheets.values.get({
-                spreadsheetId: SPREADSHEET_ID,
-                range: `${SHEET_NAME}!A2:H`,
-            });
-            const rows = response.result.values || [];
-            const data = rows.map(row => ({
-                id: row[0], time: row[1], name: row[2], category: row[3],
-                lat: row[4], lng: row[5], user: row[6], driveId: row[7]
-            }));
-            renderList(data);
-        } catch (e) { console.error("同步失敗", e); }
-        document.getElementById('loading-overlay').style.display = 'none';
-    }
-
     async function saveRecord() {
         const name = document.getElementById('locName').value;
         const lat = document.getElementById('lat').value;
-        if (!name || !lat || !rawFile) return alert("請填寫名稱、座標並選取照片");
+        if (!name || !lat || !croppedBlob) return alert("請填寫資訊並確認已裁切照片");
 
         document.getElementById('loading-overlay').style.display = 'flex';
         try {
-            const driveId = await uploadToDrive(rawFile);
+            const driveId = await uploadToDrive(croppedBlob);
             const newRecord = {
                 id: Date.now(),
                 time: new Date().toLocaleString(),
@@ -240,17 +232,35 @@
                 user: currentUserEmail,
                 driveId: driveId
             };
-            await saveToSheet(newRecord);
-            alert("同步成功！");
             
-            // 局部更新，不重刷頁面
-            clearForm();
-            await initDataSync(); 
+            // 寫入 Google Sheets
+            await gapi.client.sheets.spreadsheets.values.append({
+                spreadsheetId: SPREADSHEET_ID,
+                range: `${SHEET_NAME}!A1`,
+                valueInputOption: 'RAW',
+                resource: { values: [[ newRecord.id, newRecord.time, newRecord.name, newRecord.category, newRecord.lat, newRecord.lng, newRecord.user, newRecord.driveId ]] }
+            });
 
-        } catch (e) { 
-            console.error(e);
-            alert("儲存失敗，請確認登入時是否勾選了『試算表編輯』權限"); 
-        }
+            alert("同步儲存成功！");
+            clearForm();
+            await initDataSync(); // 局部刷新清單，不會登出
+
+        } catch (e) { alert("儲存失敗，請檢查權限"); }
+        document.getElementById('loading-overlay').style.display = 'none';
+    }
+
+    async function initDataSync() {
+        if (!gapi.client.sheets) return;
+        document.getElementById('loading-overlay').style.display = 'flex';
+        try {
+            const response = await gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID, range: `${SHEET_NAME}!A2:H`,
+            });
+            const data = (response.result.values || []).map(row => ({
+                id: row[0], time: row[1], name: row[2], category: row[3], lat: row[4], lng: row[5], user: row[6], driveId: row[7]
+            }));
+            renderList(data);
+        } catch (e) { console.error("讀取失敗", e); }
         document.getElementById('loading-overlay').style.display = 'none';
     }
 
@@ -260,19 +270,18 @@
         document.getElementById('lng').value = '';
         document.getElementById('fileInput').value = '';
         document.getElementById('preview-container').style.display = 'none';
-        rawFile = null;
+        croppedBlob = null;
     }
 
     function renderList(data) {
         const list = document.getElementById('recordList');
         if (data.length === 0) {
-            list.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:50px;">📭 目前還沒有共享紀錄</p>';
+            list.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:50px;">📭 目前還沒有紀錄</p>';
             return;
         }
         list.innerHTML = data.slice().reverse().map(r => `
             <div class="item-card">
-                <img src="https://drive.google.com/thumbnail?id=${r.driveId}&sz=w800" 
-                     onclick="window.open('https://drive.google.com/file/d/${r.driveId}/view')">
+                <img src="https://drive.google.com/thumbnail?id=${r.driveId}&sz=w800" onclick="window.open('https://drive.google.com/file/d/${r.driveId}/view')">
                 <div class="item-info">
                     <div class="item-text">
                         <h3>${r.name} <span class="badge" style="background:${r.category === '菇' ? '#ec4899' : '#f59e0b'}">${r.category}</span></h3>
@@ -284,6 +293,8 @@
             </div>
         `).join('');
     }
+
+    function handleAuthClick() { tokenClient.requestAccessToken({prompt: 'consent'}); }
 </script>
 <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
 <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
